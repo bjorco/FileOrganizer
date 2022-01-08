@@ -1,16 +1,9 @@
-import calendar
-import enum
-import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from tkinter.filedialog import askdirectory
 from typing import Dict, Optional
 
-import pyautogui
 from PyPDF2 import PdfFileReader
 
-MONTHS = {month: index for index, month in enumerate(calendar.month_abbr) if month}
 
 @dataclass
 class DocumentInfo:

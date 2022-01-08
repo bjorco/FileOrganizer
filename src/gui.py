@@ -1,17 +1,15 @@
 import ctypes
-import json
-import sqlite3
 import tkinter as tk
 from dataclasses import asdict
 from pathlib import Path
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
-import pdf_reader
+import model
 import pdf_viewer
 from item_treeview import DocumentInfoTree
-import model
+
 
 class Event:
     DO_UPDATE_DOCUMENTS = '<<DO_UPDATE_DOCUEMENTS>>'
@@ -104,10 +102,11 @@ class App:
         self.dst: List[model.FolderMapping] = mappings
         
         self.db = DocumentStore(Path('.'))
+        self.pdf_viewer = pdf_viewer.PdfViewer()
 
         panes = ttk.Panedwindow(self.gui, orient='horizontal')
         self.document_overview = DocumentOverview(panes)
-        self.pdf_viewer = pdf_viewer.PdfViewer(panes)
+        self.viewer_frame = self.pdf_viewer.create_viewer(panes)
 
         self.document_overview.documents.content = self.db.documents.values()
         self.document_overview.bind(Event.DO_UPDATE_DOCUMENTS, self.on_update_documents)
@@ -117,15 +116,20 @@ class App:
 
         panes.pack(side='top', expand=True, fill='both')
         panes.add(self.document_overview, weight=1)
-        panes.add(self.pdf_viewer, weight=1)
+        panes.add(self.viewer_frame, weight=1)
 
     def on_update_documents(self, event = None) -> None:
-        self.db.read_documents()
-        self.document_overview.documents.content = self.db.documents.values()
+        documents = []
+        for mapping in self.dst:
+            for f in mapping.source.glob('*.pdf'):
+                documents.append(model.DocumentInfo(f))
+        self.document_overview.documents.content = documents
+        # self.db.read_documents()
+        # self.document_overview.documents.content = self.db.documents.values()
     
     def on_selected_document(self, event = None) -> None:
         if f := self.document_overview.selected_document:
-            self.pdf_viewer.file = Path(f.link)
+            self.pdf_viewer.display(Path(f.link))
     
     def register_document(self, event = None) -> None:
         doc = self.document_overview.selected_document
@@ -144,6 +148,9 @@ def main() -> None:
     series = []
     mappings = []
 
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    app = App(series, mappings)
+
     while input('Add numberseries? y/n ') == 'y':
         prefix = input('Series prefix: ')
         number = int(input('Number: '))
@@ -152,14 +159,12 @@ def main() -> None:
         print(series)
     
     while input('Add folder mapping? y/n ') == 'y':
-        source = Path(askdirectory('Seelct source'))
-        dest = Path(askdirectory('Seelct destination'))
         prefix = input('Numberseries prefix: ')
+        source = Path(askdirectory(title='Select source'))
+        dest = Path(askdirectory(title='Select destination'))
 
         mappings.append(model.FolderMapping(source, dest, prefix))
 
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    app = App(series, mappings)
     app.gui.mainloop()
 
 if __name__ == '__main__':

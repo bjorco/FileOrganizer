@@ -26,7 +26,7 @@ class NumberSeries:
 
 @dataclass 
 class FolderMapping:
-    souce: Path
+    source: Path
     destination: Path
     prefix: str
 
