@@ -1,7 +1,10 @@
-from tkinter import ttk, font
-from typing import Any, TypeVar, Dict, Tuple
 import abc
+from tkinter import font, ttk
+from typing import Any, Dict, Tuple, TypeVar
+
+import model
 from scrollbar_treeview import ScrollbarTreeview
+
 
 class TreeviewAdapter(abc.ABC):
     """ Abstract class for containing objects to be displayed in a treeview """
@@ -33,15 +36,25 @@ class DocumentInfoAdapter(TreeviewAdapter):
         super().__init__(document_info)
 
     def folder(self) -> str:
-        if self.item.dst_folder is None:
+        if self.item.status == model.Status.OK:
             return self.item.source.name
-        else:
+        elif self.item.status == model.Status.PENDING:
             src = self.item.source.name
             dst = self.item.dst_folder.name
             return f'{src}->{dst}'
+        else:
+            return self.item.dst_folder.name
 
     def text(self):
         return self.item.link
+    
+    def tag(self, index):
+        if self.item.status == model.Status.PENDING:
+            return ('pending', )
+        elif self.item.status == model.Status.MOVED:
+            return ('moved', )
+        else:
+            return super().tag(index)
     
     def values(self):
         return (
@@ -78,7 +91,7 @@ class ItemTreeview(ttk.Treeview):
         self.displayed_columns = []
         for h in self.adapter_class.headings:
             self.heading(h, text=h, command=lambda h=h: self.on_sort(h))
-            self.column(h, width=10, stretch=True)
+            self.column(h, stretch=True)
 
             self.displayed_columns.append(h)
         
@@ -260,3 +273,7 @@ class DocumentInfoTree(ItemTreeview, SearchableTree, ScrollbarTreeview):
     def __init__(self, master, **kwargs):
         super().__init__(master=master, adapter=DocumentInfoAdapter)
         self._num_search_values = 3
+
+        self.tag_configure('pending', background='gold', foreground='yellow')
+        self.tag_configure('moved', background='lightgreen', foreground='grey23')
+

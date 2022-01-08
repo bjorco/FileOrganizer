@@ -1,7 +1,14 @@
+import enum
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
- 
+
+
+class Status(enum.Enum):
+    OK = enum.auto()
+    PENDING = enum.auto()
+    MOVED = enum.auto()
+
 class NumberSeries:
     def __init__(self, prefix, number):
         self.prefix = prefix
@@ -16,13 +23,19 @@ class NumberSeries:
     def next(self) -> str:
         """ Returns the next filenumber in the series. """
         self.current_number += 1
-        return f'{self.prefix}{self.current}'
+        return f'{self.prefix}{self.current_number}'
     
     def save(self) -> None:
         self.number = self.current_number
     
     def reset(self) -> None:
         self.current_number = self.number
+    
+    def __str__(self) -> str:
+        return f'<{self.__class__.__qualname__}({self.prefix!r}, {self.number!r})>'
+    
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__qualname__}({self.prefix!r}, {self.number!r})>'
 
 @dataclass 
 class FolderMapping:
@@ -38,4 +51,8 @@ class DocumentInfo:
         self.name = self.link.name
         self.date = datetime.now()
         self.dst_folder = None
-        self.status = ''
+        self.status = Status.OK
+    
+    @property
+    def is_pending(self) -> bool:
+        return self.status == Status.PENDING
